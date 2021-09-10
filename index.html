@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <title>
+    How I recovered your private key or why small keys are bad | Sebastian Neef - 0day.work
+    </title>
+
+    
+
+    <meta name="HandheldFriendly" content="True" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <link rel="shortcut icon" href="/favicon.png">
+
+    <!--<link rel="stylesheet" type="text/css" href="/assets/css/screen.css?v=6cba12b340" />-->
+
+    <link rel="stylesheet" href="/assets/css/bootstrap.min.css?v=6cba12b340"/>
+    <link rel="stylesheet" href="/assets/css/monokai_sublime.css?v=6cba12b340">
+    <link rel="stylesheet" href="/assets/css/default.css?v=6cba12b340">
+    <link rel="stylesheet" href="/assets/css/elusive-icons.min.css?v=6cba12b340">
+    <link rel="stylesheet" href="/assets/css/cookieconsent.min.css?v=6cba12b340">
+
+    <link rel="icon" href="/favicon.png" type="image/png" />
+    <link rel="canonical" href="https://0day.work/how-i-recovered-your-private-key-or-why-small-keys-are-bad/" />
+    <meta name="referrer" content="no-referrer-when-downgrade" />
+    <link rel="amphtml" href="https://0day.work/how-i-recovered-your-private-key-or-why-small-keys-are-bad/amp/" />
+    
+    <meta property="og:site_name" content="Sebastian Neef - 0day.work" />
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="How I recovered your private key or why small keys are bad" />
+    <meta property="og:description" content="In the following blogpost I will explain why it is a bad idea to use small RSA keys. To make things look and feel real, I will demonstrate all steps needed to factorize and recover a private key.  What is RSA? RSA is an asymmetric public-key cryptosystem named after its" />
+    <meta property="og:url" content="https://0day.work/how-i-recovered-your-private-key-or-why-small-keys-are-bad/" />
+    <meta property="article:published_time" content="2016-03-04T00:56:29.000Z" />
+    <meta property="article:modified_time" content="2016-11-13T17:14:57.000Z" />
+    <meta property="article:tag" content="code" />
+    <meta property="article:tag" content="research" />
+    
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="How I recovered your private key or why small keys are bad" />
+    <meta name="twitter:description" content="In the following blogpost I will explain why it is a bad idea to use small RSA keys. To make things look and feel real, I will demonstrate all steps needed to factorize and recover a private key.  What is RSA? RSA is an asymmetric public-key cryptosystem named after its" />
+    <meta name="twitter:url" content="https://0day.work/how-i-recovered-your-private-key-or-why-small-keys-are-bad/" />
+    <meta name="twitter:label1" content="Written by" />
+    <meta name="twitter:data1" content="Sebastian Neef" />
+    <meta name="twitter:label2" content="Filed under" />
+    <meta name="twitter:data2" content="code, research" />
+    <meta name="twitter:site" content="@0daywork" />
+    
+    <script type="application/ld+json">
+{
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "publisher": {
+        "@type": "Organization",
+        "name": "Sebastian Neef - 0day.work",
+        "url": "https://0day.work/",
+        "logo": {
+            "@type": "ImageObject",
+            "url": "https://0day.work/content/images/2016/01/0day-1.png",
+            "width": 60,
+            "height": 60
+        }
+    },
+    "author": {
+        "@type": "Person",
+        "name": "Sebastian Neef",
+        "url": "https://0day.work/author/sebastian/",
+        "sameAs": []
+    },
+    "headline": "How I recovered your private key or why small keys are bad",
+    "url": "https://0day.work/how-i-recovered-your-private-key-or-why-small-keys-are-bad/",
+    "datePublished": "2016-03-04T00:56:29.000Z",
+    "dateModified": "2016-11-13T17:14:57.000Z",
+    "keywords": "code, research",
+    "description": "In the following blogpost I will explain why it is a bad idea to use small RSA\nkeys. To make things look and feel real, I will demonstrate all steps needed to\nfactorize and recover a private key.\n\nWhat is RSA?\nRSA [https://en.wikipedia.org/wiki/RSA_%28algorithm%29] is an asymmetric\npublic-key cryptosystem named after its inventors Rivest, Shamir &amp; Adleman. Two\nkeys are required to succesfully encrypt and decrypt a message. A keypair\nconsists of the following keys:\n\n * Private key: The recipient ",
+    "mainEntityOfPage": {
+        "@type": "WebPage",
+        "@id": "https://0day.work/"
+    }
+}
+    </script>
+
+    <meta name="generator" content="Ghost 3.42" />
+    <link rel="alternate" type="application/rss+xml" title="Sebastian Neef - 0day.work" href="https://0day.work/rss/" />
+    <style>
+    .post img {
+    	max-width: 50%;
+        height: auto;
+        display:block;
+        margin: 0 auto;
+    }
+    .description i.read-more::before {
+    	content: "read more...";
+    }
+    
+    body {
+        font-size: 1.7em;
+    }
+</style>
+<link rel="stylesheet" href="/assets/css/jquery.fancybox.min.css" />
+
+    <script type="text/javascript" src="/assets/js/jquery.js?v=6cba12b340"></script>
+    <script type="text/javascript" src="/assets/js/cookieconsent.min.js?v=6cba12b340"></script>
+    <script type="text/javascript" src="/assets/js/cookies.js?v=6cba12b340"></script>
+
+    <!--<link rel="stylesheet" href="/assets/css/default.css?v=6cba12b340">-->
+    
+    <script src="/assets/js/highlight.pack.js?v=6cba12b340"></script>
+  
+      <script>hljs.initHighlightingOnLoad();</script>
+
+
+<script>
+
+</script>
+</head>
+<body>
+<div class="container">
+<div class="row">
+<div class="col-md-2 hidden-sm hidden-xs">
+
+    <div class="logo">
+<a class="blog-logo" href="https://0day.work">
+        <img class="blog-logo-image" src="/content/images/2016/01/0day-1.png" alt="Blog Logo"/>
+</a>
+    </div>
+
+
+<h5>Sebastian Neef - 0day.work</h5>
+<hr>
+<ul class="list-unstyled menu">
+    <li>
+        <a href="https://0day.work/">
+         <i class="el el-home"></i> Home 
+        </a>
+    </li>
+    <li>
+        <a href="https://0day.work/contact/">
+         <i class="el el-envelope"></i> Contact
+        </a>
+    </li>
+
+    <li>
+       <a href="https://twitter.com/0daywork" target="_blank">
+            <i class="el el-twitter"></i> @0daywork
+       </a>
+    </li>
+
+    <li>
+        <a href="https://twitter.com/gehaxelt" target="_blank">
+            <i class="el el-twitter"></i> @gehaxelt
+        </a>
+    </li>
+
+    <li>
+        <a href="https://it-solutions-neef.de/impressum.html" target="_blank">
+            Impressum
+        </a>
+    </li>
+
+    <li>
+        <a href="https://it-solutions-neef.de/datenschutz.html" target="_blank">
+           Datenschutz 
+        </a>
+    </li>
+
+
+</ul>
+
+
+
+</div>
+<div class="col-md-10 col-xs-12">
+    
+
+<a href="/" class="read-more"><i class="el el-caret-left read-more"></i> home</a>
+<hr>
+
+
+
+
+
+<main  role="main">
+
+    <article class="row post tag-code tag-research no-image">
+
+        <header class="col-xs-12">
+        <div class="col-md-10 no-margin no-padding post">
+            <h1 class="title">
+            How I recovered your private key or why small keys are bad
+
+            </h1>
+             </div>
+<div class="col-md-2">
+            </div>
+
+        </header>
+
+        <section class="col-xs-12">
+            <!--kg-card-begin: markdown--><p>In the following blogpost I will explain why it is a bad idea to use small RSA keys. To make things look and feel real, I will demonstrate all steps needed to factorize and recover a private key.</p>
+<!-- more -->
+<h1 id="whatisrsa">What is RSA?</h1>
+<p><a href="https://en.wikipedia.org/wiki/RSA_%28algorithm%29">RSA</a> is an asymmetric public-key cryptosystem named after its inventors Rivest, Shamir &amp; Adleman. Two keys are required to succesfully encrypt and decrypt a message. A keypair consists of the following keys:</p>
+<ul>
+<li>Private key: The recipient needs this key to decrypt the message and it should be kept private.</li>
+<li>Public key: The sender needs this key to send an encrypted message to the recipient and it can be public.</li>
+</ul>
+<p>Let's have a short look on how the <a href="https://en.wikipedia.org/wiki/RSA_(cryptosystem)#Example">RSA key generation</a> works:</p>
+<ol>
+<li>Find two distinct prime numbers <code>p</code> and <code>q</code>: E.g. <code>p=61</code> and <code>q=53</code></li>
+<li>Calculate the modulus <code>n=p*q</code>: <code>n=61*53=3233</code></li>
+<li>Calculate <code>phi(n)=(p-1)*(q-1)</code>: <code>phi(3233)=(61-1)*(53-1)=60*52=3120</code></li>
+<li>Find a number <code>e</code> which is coprime to <code>phi(n)</code> and <code>1 &lt; e &lt; phi(n)</code> holds. A trick is to choose <code>e</code> prime and check that <code>e</code> does not divide <code>phi(n)</code>. <code>e=17</code></li>
+<li>Compute the modular multiplicative inverse <code>d</code> of <code>e (mod phi(n))</code>: <code>d=2753</code></li>
+</ol>
+<p>Now we have all numbers to form the keys:</p>
+<ul>
+<li>The public key is (n=3233, e=17)</li>
+<li>The private key is (n=3233, d=2753)</li>
+</ul>
+<p>En-/decrypting a message <code>m</code> is simple:</p>
+<ul>
+<li>Encryption: <code>c(m) = m ^ e mod n</code></li>
+<li>Decryption: <code>m(c) = c ^ d mod n</code></li>
+</ul>
+<h1 id="usingopenssl">Using OpenSSL</h1>
+<p>Now that we know the theory behind RSA we can use <a href="https://www.openssl.org/">OpenSSL</a> to do the work for us.</p>
+<p>Let's create a private key:</p>
+<pre><code class="language-text">$&gt; openssl genrsa 128 &gt; my.key
+Generating RSA private key, 128 bit long modulus
+..+++++++++++++++++++++++++++
+..+++++++++++++++++++++++++++
+e is 65537 (0x10001)
+</code></pre>
+<p><em>Note: This is only a 128 bit key. Use this only for demo/educational purposes!</em></p>
+<p>The <code>genrsa</code> command does all the steps 1-5 (and maybe a bit more). Note that the modulus (<code>n</code>) is 128 bit long. That usually means that the primes <code>p</code> &amp; <code>q</code> are half the size, because <code>n = p*q</code>.</p>
+<p>You can get some information about the private key with the <code>rsa</code> command:</p>
+<pre><code class="language-text">$&gt; openssl rsa -inform PEM -text -noout &lt; my.key 
+Private-Key: (128 bit)
+modulus:
+    00:c8:08:21:20:63:7e:86:2a:79:fb:67:1f:04:ea:
+    a2:65
+publicExponent: 65537 (0x10001)
+privateExponent:
+    7f:ab:98:a1:18:7f:b7:d7:20:f1:87:86:c5:da:0e:
+    3d
+prime1: 17546182527694491887 (0xf380900b976550ef)
+prime2: 15153598738517072363 (0xd24c65c3f61e19eb)
+exponent1: 13725148347990572143 (0xbe7985b41b847c6f)
+exponent2: 1796132795227133041 (0x18ed2542ccf15471)
+coefficient: 17063613649022129323 (0xecce2234f67894ab)
+</code></pre>
+<p>However, the private key is our secret and we need the public key to encrypt a message. Extract the public key with the <code>-pubout</code> switch:</p>
+<pre><code class="language-text">$&gt; openssl rsa -pubout -in my.key &gt; my.pub 
+writing RSA key
+
+$&gt; openssl rsa -inform PEM -text -noout -pubin &lt; my.pub 
+Public-Key: (128 bit)
+Modulus:
+    00:c8:08:21:20:63:7e:86:2a:79:fb:67:1f:04:ea:
+    a2:65
+Exponent: 65537 (0x10001)
+
+$&gt; cat my.pub 
+-----BEGIN PUBLIC KEY-----
+MCwwDQYJKoZIhvcNAQEBBQADGwAwGAIRAMgIISBjfoYqeftnHwTqomUCAwEAAQ==
+-----END PUBLIC KEY-----
+</code></pre>
+<p>As you can see, our public key contains only the modulus <code>n</code> and the exponent <code>e</code>. The file <code>my.pub</code> is the public key in PEM format.</p>
+<p>Let's encrypt a message using our public key. OpenSSL's <code>rsautl</code> helps with that:</p>
+<pre><code class="language-text">$&gt; echo -n &quot;Hi&quot; |openssl rsautl -encrypt -inkey my.key &gt; message
+
+$&gt; cat message 
+¨á²áåÔÈä³F
+           É6                
+$&gt; cat message | hexdump 
+0000000 e1a8 947f e1b2 e514 c8d4 b3e4 0c46 36c9
+0000010
+
+</code></pre>
+<p><em>Note: This only works for messages which are smaller than the modulus. Usually the message is encrypted with a symmetric key which is in turn encrypted with RSA.</em></p>
+<p>As you can see, we encrypted our message &quot;Hi&quot; and the result is gibberish. Only the recipient can decrypt it using his private key.</p>
+<h1 id="recoveringtheprivatekey">Recovering the private key</h1>
+<p>As said above, the sender needs the recipient's public key to encrypt a message. Unfortunately, one can factorize the modulus <code>n</code> into two primes <code>p*q</code> if <code>n</code> is too small (usually &lt; 1048). Thus an adversary can recover the private key and decrypt the message.</p>
+<p>I have chosen a pretty small key of 192 bits above. Let's assume we are the adversary and are interested in recovering the contents of the message. We only have the public key, because it was uploaded to a keyserver, and the encrypted message:</p>
+<pre><code class="language-text">Modulus:
+    00:c8:08:21:20:63:7e:86:2a:79:fb:67:1f:04:ea:
+    a2:65
+Exponent: 65537 (0x10001)
+</code></pre>
+<p>The modulus n is <code>0x00c8082120637e862a79fb671f04eaa265</code> (simply remove the colons). The most time consuming part is to find two prime numbers <code>p'</code> &amp; <code>q'</code> so that <code>n=p'*q'</code>.<br>
+We can use a tool like <a href="https://sourceforge.net/projects/yafu/">Yafu</a> or a site like <a href="http://factordb.com/">factordb.com</a>:</p>
+<pre><code class="language-text">$&gt; yafu &quot;factor(0x00c8082120637e862a79fb671f04eaa265)&quot;
+fac: factoring 265887809417461548369618742468095418981
+[..snip..]
+Total factoring time = 0.3822 seconds
+***factors found***
+P20 = 17546182527694491887
+P20 = 15153598738517072363
+</code></pre>
+<p>Okay, cool. It took us <code>0.4 seconds</code> to find the prime factors of our modulus:</p>
+<ul>
+<li><code>p'=17546182527694491887</code></li>
+<li><code>q'=15153598738517072363</code></li>
+</ul>
+<p>The rest is some math again. Let's use python for it:</p>
+<pre><code class="language-python">$&gt; python2
+&gt;&gt;&gt; e = 0x010001
+&gt;&gt;&gt; n = 0x00c8082120637e862a79fb671f04eaa265
+&gt;&gt;&gt; p = 17546182527694491887
+&gt;&gt;&gt; q = 15153598738517072363
+</code></pre>
+<p>Now we basically have to do step 3 and 5 to recover <code>d</code>. We calculate <code>phi(n)</code> first:</p>
+<pre><code class="language-python">&gt;&gt;&gt; phi = (p -1)*(q-1)
+</code></pre>
+<p>After that we can use the <a href="https://en.wikibooks.org/wiki/Algorithm_Implementation/Mathematics/Extended_Euclidean_algorithm">extended euclidean algorithm</a> to calculate the modular inverse:</p>
+<pre><code class="language-python">&gt;&gt;&gt; def egcd(a, b):
+...     if a == 0:
+...         return (b, 0, 1)
+...     else:
+...         g, y, x = egcd(b % a, a)
+...         return (g, x - (b // a) * y, y)
+... 
+&gt;&gt;&gt; def modinv(a, m):
+...     gcd, x, y = egcd(a, m)
+...     if gcd != 1:
+...         return None  # modular inverse does not exist
+...     else:
+...         return x % m
+... 
+&gt;&gt;&gt; d = modinv(e,phi)
+&gt;&gt;&gt; d
+169702933917069733210018512109397741117L
+&gt;&gt;&gt; hex(d)
+'0x7fab98a1187fb7d720f18786c5da0e3dL'
+</code></pre>
+<p>If you take a close look at the hex value of <code>d</code> you will notice that this is the same as our private key:</p>
+<pre><code class="language-text">privateExponent:
+    7f:ab:98:a1:18:7f:b7:d7:20:f1:87:86:c5:da:0e:
+    3d
+</code></pre>
+<p><strong>YAY</strong>, we successfully recovered the private key.</p>
+<p>Now we could decrypt the message manually, but I prefer to create a private key file and use OpenSSL. It does not use <code>d</code> for decryption, but three more variables to be more efficient.</p>
+<pre><code class="language-python">&gt;&gt;&gt; dp = modinv(e,(p-1))
+&gt;&gt;&gt; dq = modinv(e,(q-1))
+&gt;&gt;&gt; qi = modinv(q,p)
+</code></pre>
+<p>Now we can use a <a href="http://crypto.stackexchange.com/questions/25498/how-to-create-a-pem-file-for-storing-an-rsa-key/25499#25499">snippet from crypto.stackexchange.com</a> to create the PEM-encoded private key. You may need to install <code>python2-pyasn1</code> on your system.</p>
+<pre><code class="language-python">&gt;&gt;&gt; import pyasn1.codec.der.encoder
+&gt;&gt;&gt; import pyasn1.type.univ
+&gt;&gt;&gt; import base64
+&gt;&gt;&gt; def pempriv(n, e, d, p, q, dP, dQ, qInv):
+...     template = '-----BEGIN RSA PRIVATE KEY-----\n{}-----END RSA PRIVATE KEY-----\n'
+...     seq = pyasn1.type.univ.Sequence()
+...     for x in [0, n, e, d, p, q, dP, dQ, qInv]:
+...         seq.setComponentByPosition(len(seq), pyasn1.type.univ.Integer(x))
+...     der = pyasn1.codec.der.encoder.encode(seq)
+...     return template.format(base64.encodestring(der).decode('ascii'))
+... 
+&gt;&gt;&gt; key = pempriv(n,e,d,p,q,dp,dq,qi)
+&gt;&gt;&gt; key
+'-----BEGIN RSA PRIVATE KEY-----\nMGMCAQACEQDICCEgY36GKnn7Zx8E6qJlAgMBAAECEH+rmKEYf7fXIPGHhsXaDj0CCQDzgJALl2VQ\n7wIJANJMZcP2HhnrAgkAvnmFtBuEfG8CCBjtJULM8VRxAgkA7M4iNPZ4lKs=\n-----END RSA PRIVATE KEY-----\n'
+&gt;&gt;&gt; f = open(&quot;recovered.key&quot;,&quot;w&quot;)
+&gt;&gt;&gt; f.write(key)
+&gt;&gt;&gt; f.close()
+</code></pre>
+<p>Done!<br>
+Let's see what OpenSSL says about our recovered key:</p>
+<pre><code class="language-text">$&gt; openssl rsa -inform PEM -text -noout &lt; recovered.key  
+Private-Key: (128 bit)
+modulus:
+    00:c8:08:21:20:63:7e:86:2a:79:fb:67:1f:04:ea:
+    a2:65
+publicExponent: 65537 (0x10001)
+privateExponent:
+    7f:ab:98:a1:18:7f:b7:d7:20:f1:87:86:c5:da:0e:
+    3d
+prime1: 17546182527694491887 (0xf380900b976550ef)
+prime2: 15153598738517072363 (0xd24c65c3f61e19eb)
+exponent1: 13725148347990572143 (0xbe7985b41b847c6f)
+exponent2: 1796132795227133041 (0x18ed2542ccf15471)
+coefficient: 17063613649022129323 (0xecce2234f67894ab)
+</code></pre>
+<p><em>Note: The values <code>exponent1</code> / <code>exponent2</code> might differ, but that does not matter.</em></p>
+<p>The last step is to decrypt the message with our recovered key:</p>
+<pre><code class="language-text">$&gt; cat message  |openssl rsautl -decrypt -inkey recovered.key 
+Hi
+</code></pre>
+<p><strong>YAY</strong>, we did it! :)</p>
+<h1 id="conclusion">Conclusion</h1>
+<p>I hope you learned that using asymmetric cryptosystems is cool, but using them with small keys is not.<br>
+Keys up to 300 bits can be factored <a href="http://iamnirosh.blogspot.de/2015/02/factoring-rsa-keys.html">within an hour on personal computers</a>. There's even an <a href="https://en.wikipedia.org/wiki/RSA_Factoring_Challenge">RSA factoring challenge</a> and the largest factored modulus is 768 bit long. This is a real problem, because people used such small <a href="https://blog.benjojo.co.uk/post/auditing-github-users-keys">ssh keys on GitHub</a>. Sometimes too small keys can lead to <a href="https://weakdh.org/">serious security issues</a>.</p>
+<p>It's recommended to use keys with at least 2048 bits. There is almost no performance loss, even on smartphones.</p>
+<h1 id="code">Code</h1>
+<p>Here's the full python code:</p>
+<pre><code class="language-python">#!/usr/bin/python2
+import pyasn1.codec.der.encoder
+import pyasn1.type.univ
+import base64
+
+def recover_key(p, q, e, output_file):
+	&quot;&quot;&quot;Recoveres a RSA private key from:
+		p: Prime p 
+		q: Prime q
+		e: Public exponent 
+		output_file: File to write PEM-encoded private key to&quot;&quot;&quot;
+	
+	# SRC: https://en.wikibooks.org/wiki/Algorithm_Implementation/Mathematics/Extended_Euclidean_algorithm
+	def egcd(a, b):
+	    x,y, u,v = 0,1, 1,0
+	    while a != 0:
+	        q, r = b//a, b%a
+	        m, n = x-u*q, y-v*q
+	        b,a, x,y, u,v = a,r, u,v, m,n
+	    gcd = b
+	    return gcd, x, y
+
+	def modinv(a, m):
+	    gcd, x, y = egcd(a, m)
+	    if gcd != 1:
+	        return None  # modular inverse does not exist
+	    else:
+	        return x % m
+
+	# SRC: http://crypto.stackexchange.com/questions/25498/how-to-create-a-pem-file-for-storing-an-rsa-key/25499#25499
+	def pempriv(n, e, d, p, q, dP, dQ, qInv):
+	    template = '-----BEGIN RSA PRIVATE KEY-----\n{}-----END RSA PRIVATE KEY-----\n'
+	    seq = pyasn1.type.univ.Sequence()
+	    for x in [0, n, e, d, p, q, dP, dQ, qInv]:
+	        seq.setComponentByPosition(len(seq), pyasn1.type.univ.Integer(x))
+	    der = pyasn1.codec.der.encoder.encode(seq)
+	    return template.format(base64.encodestring(der).decode('ascii'))
+
+	n = p * q
+	phi = (p -1)*(q-1)
+	d = modinv(e, phi)
+	dp = modinv(e,(p-1))
+	dq = modinv(e,(q-1))
+	qi = modinv(q,p)
+
+	key = pempriv(n, e, d, p, q, dp, dq, qi)
+
+	f = open(output_file,&quot;w&quot;)
+	f.write(key)
+	f.close()
+</code></pre>
+<p><em><strong>Update 13.11.2016:</strong></em><br>
+Use correct formulas for <a href="https://www.ipa.go.jp/security/rfc/RFC3447EN.html#2">dp, dq, qi</a>.</p>
+<p>-=-</p>
+<!--kg-card-end: markdown-->
+        </section>
+
+        <footer class="col-xs-12 author">
+            
+            <hr>
+
+      
+        </footer>
+
+    </article>
+    
+</main>
+
+
+</div>
+
+</div>
+</div>
+
+    <footer class="page-footer">
+      <div class="container">
+        <div class="row">
+          <div class="col-xs-6">
+          <i class="el el-stop footer-icon"></i>
+            &copy; 2021 <a href="https://0day.work">Sebastian Neef - 0day.work</a> All rights reserved.<br><br>
+            Coder Ghost Theme created by <a href="https://www.mbejda.com">Milos Bejda</a>
+          </div>
+          <div class="col-xs-6 text-right hidden-sm hidden-xs">Proudly published with <a href="https://ghost.org">Ghost</a></div>
+        </div>
+      </div>
+    </footer>
+
+    <a href="#" class="back-to-top"><span class="fa fa-angle-up fa-2x"></span></a>
+
+    <script src="/assets/js/jquery.fancybox.min.js?v=1"></script>
+<script src="/assets/js/fancybox.js?v=1"></script>
+<!-- Piwik -->
+<script type="text/javascript">
+  var _paq = _paq || [];
+  /* tracker methods like "setCustomDimension" should be called before "trackPageView" */
+  _paq.push(["setDocumentTitle", document.domain + "/" + document.title]);
+  _paq.push(["setCookieDomain", "*.0day.work"]);
+  _paq.push(["setDomains", ["*.0day.work"]]);
+  _paq.push(['trackPageView']);
+  _paq.push(['enableLinkTracking']);
+  (function() {
+    var u="//piwik.neef.it/";
+    _paq.push(['setTrackerUrl', u+'piwik.php']);
+    _paq.push(['setSiteId', '10']);
+    var d=document, g=d.createElement('script'), s=d.getElementsByTagName('script')[0];
+    g.type='text/javascript'; g.async=true; g.defer=true; g.src=u+'piwik.js'; s.parentNode.insertBefore(g,s);
+  })();
+</script>
+<noscript><p><img src="//piwik.neef.it/piwik.php?idsite=10&rec=1" style="border:0;" alt="" /></p></noscript>
+<!-- End Piwik Code -->
+
+    <script src="/assets/js/modernizr.js?v=6cba12b340"></script>
+    <script type="text/javascript" src="/assets/js/index.js?v=6cba12b340"></script>
+
+</body>
+</html>
